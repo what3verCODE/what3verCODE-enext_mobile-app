@@ -1,0 +1,98 @@
+
+
+FutureBuilder<List<Course>>(
+        future: fetchCourses(),
+        builder: (context, snapshot) {
+          if(snapshot.hasData) {
+            List<Course> courses = snapshot.data;
+            return _coursesList(courses, context);
+          } else if(snapshot.hasError) {
+            return Text("${snapshot.error}");
+          }
+
+          return CircularProgressIndicator();
+        }
+      )
+
+
+        Future<List<Course>> fetchCourses() async {
+          var url = 'http://194.58.114.121/courses';
+          var response = await http.get(url);
+
+          if(response.statusCode == 200) {
+            List coursesJson = json.decode(response.body);
+            return coursesJson.map((course) => new Course.fromJson(course, false)).toList();
+          } else {
+            throw Exception('Failed to load courses from API');
+          }
+        }
+
+          Future<Course> fetchCourse({id: int}) async {
+          var url = 'http://194.58.114.121/courses/$id';
+          var response = await http.get(url);
+
+          if(response.statusCode == 200) {
+            var courseJson = json.decode(response.body);
+            return Course.fromJson(courseJson, true);
+          } else {
+            throw Exception('Failed to load courses from API');
+          }
+        }
+
+          ListView _coursesList(List<Course> courses, BuildContext context) {
+            return ListView.builder(
+              itemCount: courses.length,
+              itemBuilder: (context, index) {
+                return _tile(course: courses[index], icon: Icons.subject, context: context);
+              }
+            );
+          }
+
+          Route<Object> _courseDetailsPage({id: int, title: String}) {
+            return MaterialPageRoute(builder: (context) {
+              return Scaffold(
+                appBar: AppBar(title: Text(title)),
+                body: FutureBuilder<Course> (
+                  future: fetchCourse(id: id),
+                  builder: (context, snapshot) {
+                    if(snapshot.hasData) {
+                      Course course = snapshot.data;
+                      return _courseDetails(course: course);
+                    } else if(snapshot.hasError) {
+                      return Text("${snapshot.error}");
+                    }
+
+                    return CircularProgressIndicator();
+                  },
+                ),
+              );
+            },);
+          }
+
+          Widget _courseDetails({course: Course}) {
+            return Column(
+              children: <Widget>[
+                Text(course.title),
+                RaisedButton(onPressed: () {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    EducationPage.routeName,
+                    (_) => false,
+                    arguments: EducationArguments(
+                      courseId: course.id
+                    ),
+
+                  );
+                })
+              ],
+            );
+          }
+
+            ListTile _tile({Course course, IconData icon, BuildContext context}) => ListTile(
+              title: Text(course.title, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 20)),
+              subtitle: Text(course.title),
+              leading: Icon(icon, color: Colors.blue),
+              onTap: () {
+                Navigator.of(context).push(_courseDetailsPage(id: course.id, title: course.title));
+              },
+            );
